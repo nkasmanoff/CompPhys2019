@@ -37,13 +37,13 @@ def integrate(f,a,b,N,method = 'all'):
     I_method : float
         Integral sum with that method's solution
     """
-    #trapezoid method here. 
+    
     h = (b - a) / (N)
     
-    midpoint_sum = sum([h*f((k+.5)*h) for k in range(1,N)])  #   expected error ~h^1
+    midpoint_sum = sum([h*f((k+.5)*h) for k in range(0,N)])  #   expected error ~h^1
     I_midpoint = midpoint_sum
             
-    trap_sum = sum([f(a + k*h) for k in range(1,N)])
+    trap_sum = sum([f(a + k*h) for k in range(0,N)])
     I_trapezoid = h*(f(a) / 2 + f(b) / 2 + trap_sum)  #   expected error ~h^2
               
         
@@ -53,9 +53,9 @@ def integrate(f,a,b,N,method = 'all'):
     I_simpson = (h/3)*s  #   expected error ~h^4
         
     if method == 'midpoint':
-        return np.float32(I_midpoint)
+        return I_midpoint
     if method == 'trapezoid':
-        return np.float32(I_trapezoid)
+        return I_trapezoid
     #still need to work on trapezoid rule .
     if method == 'simpson':
         return I_simpson
@@ -66,7 +66,7 @@ def integrate(f,a,b,N,method = 'all'):
 
 
 f = eminust
-true_integral = -eminust(1) +eminust(0) #this integral doesn't have an exact solution? 
+true_integral = (np.exp(1) -1) / np.exp(1) #this integral doesn't have an exact solution? 
 a = 0
 b = 1
 
@@ -74,7 +74,7 @@ Ns = 10**np.arange(0,7)
 calculated_integral = []
 
 for N in Ns:
-    
+    print("N=",N)
     calculated_integral.append(integrate(f=eminust,a=a,b=b,N=N,method='all'))
 error = abs(np.array(calculated_integral)  - true_integral)
 plt.figure(figsize=(10,10))

@@ -78,13 +78,12 @@ for _, value in enumerate(values):
         error = abs(calculated_derivative - true_deriv) #absolute error
        # print("i+1: ", i)
         plt.subplot(2, 2, i)
-        
+        plt.title(func_str + ' @ x = ' + str(value))
         plt.plot(hvals,error[:,0],'b-o',label = 'forward')
         plt.plot(hvals,error[:,1],'r-o',label = 'central')
         plt.plot(hvals,error[:,2],'g-o',label = 'extrapolation')
         #plt.xlim([max(hvals),min(hvals)])
         plt.legend()
-        plt.title("Absolute Error vs Step Size of "+ func_str + " @ x = " + str(value)  +" (log-log)")#,fontsize = 10)
         plt.xscale('log')
         plt.yscale('log')
         plt.xlabel('h (step size)')
@@ -92,5 +91,6 @@ for _, value in enumerate(values):
 
         i += 1
 
+plt.suptitle("Absolute Error vs Step Size (log-log)",fontsize = 30)#+ func_str + " @ x = " + str(value)  +" (log-log)")#,fontsize = 10)
 
 plt.savefig('../bin/q1plots.png')
