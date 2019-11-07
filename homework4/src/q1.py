@@ -1,76 +1,78 @@
-from scipy import array, sqrt, copy
-from pylab import plot, show, xlabel, ylabel
 
-# Constants
-a = 1
-b = 3
-x_0 = 0
-y_0 = 0
+
+import numpy as np
+
+import matplotlib.pyplot as plt
+
+%matplotlib inline
+
+
+# Given Constants
+a = 1.
+b = 3.
+x_0 = 0.
+y_0 = 0.
 delta = 10 ** -10  # target accuracy per unit time
-t_0 = 0
-t_f = 20
-
+t_0 = 0.
+t_f = 20.
 
 def f(r):
     """
-    Gives the RHS of the system dr/dt = f(r,t)
-    :param r: vector of the form (x, dx/dt, y, dy/dt)
-    :return: vector of the same form as r
+    
+    Brussellator Equation
+    
+    
     """
-
-    def fx(x, y):
-        return 1 - (b + 1) * x + a * x ** 2 * y
-
-    def fy(x, y):
-        return b * x - a * x ** 2 * y
-
     x = r[0]
     y = r[1]
-    return array([fx(x, y), fy(x, y)], float)
+    
+    dx = 1 - (b+1)*x + a*x*x*y
+    
+    dy = b*x - (a * x*x*y)
+    
+    return np.array([dx,dy])
 
-def solution(t_0, t_f):
-    r = array([x_0, y_0], float)
+
+from scipy import copy
+def solution(t_0,t_f):
+    r = np.array([x_0,y_0])
     tpoints = [t_0]
     xpoints = [r[0]]
     ypoints = [r[1]]
-
-    def Bulirsch_Stoer_step(r, t, H):
+    
+    def BS_step(r,t,H):
         """
-        Computes the nth Richardson extrapolation until the target accuracy is reached
-        :param r: vector containing the initial conditions, of the form [x, dx/dt, y, dy/dt]
-        :param H: the interval size
-        :return: the vector r at t + H
+        Computes a BS step  with richardson extrapolation until 
+        
+        target accuracy is reached. 
+        
         """
-
-        def modified_midpoint_step(r, n):
-            """
-            Computes the value of r(t+H) given the initial value of r(t) using the modified midpoint method with n steps
-            :param r: array of the form [x, dx/dt, y, dy/dt]
-            :param H: interval size
-            :param n: number of steps
-            :return: array with same form as r
-            """
-
+        
+        def modified_midpoint(r,n):
+            
             r = copy(r)
+            
             h = H / n
-            k = r + 0.5 * h * f(r)
+            k = r + .5 * h * f(r)
             r += h * f(k)
+            
             for i in range(n - 1):
                 k += h * f(r)
-                r += h * f(k)
-
+                r += h*f(k)
+                
             return 0.5 * (r + k + 0.5 * h * f(r))
-
-
-        def compute_row_n(R1, n):
+        
+        
+        def compute_R_n(R1,n):
             """
-            Calculates the n-th row (n >= 2) of the Richardson extrapolation table given the (n-1)th row,
-             calculates the error on the R_(n, n-1) estimate and compares it to the target accuracy
-             and continues to compute the next row until the target accuracy is satisfied
-            :param R1: the first richardson estimate R_11, i.e. from the modified midpt method with 1 step
-            :param n: the row to compute
-            :return: the Richardson estimate of r such that the estimated error is less than the target accuracy
+            Calculate the nth row of richardson extrapolation given R1 is inputed, 
+            and is simply the modified midpoint method. 
+            
+            By emplying recursion, we include in this function 
+            the function for calculating R_n_m
+            
             """
+            
 
             def R_n_m(m):
                 """
@@ -80,43 +82,52 @@ def solution(t_0, t_f):
                 """
                 return R2[m - 2] + (R2[m - 2] - R1[m - 2]) / ((n / (n - 1)) ** (2 * (m - 1)) - 1)
 
+            #stops after n > 8
+        
             if n > 8:
-                #recursion! 
-                r1 = Bulirsch_Stoer_step(r, t, H / 2)
-                return Bulirsch_Stoer_step(r1, t + H / 2, H / 2)
-            else:
+                #recursion
+                r1 = BS_step(r,t,H / 2)
+                return BS_step(r1, t + H / 2, H / 2)
+            
+            else: #if not, perform the extrapolation up to n = 8. 
                 # Compute R_n,1
-                R2 = [modified_midpoint_step(r, n)]
+                R2 = [modified_midpoint(r, n)]
                 # Compute the rest of the row
                 for m in range(2, n + 1):
                     R2.append(R_n_m(m))
-
-                # Convert to array to compute error
-                R2 = array(R2, float)
-                error_vector = (R2[n - 2] - R1[n - 2]) / ((n / (n - 1)) ** (2 * (n - 1)) - 1)
-                error = sqrt(error_vector[0] ** 2 + error_vector[1] ** 2)
-
-                # If error is smaller than accuracy, calculation terminates, else repeat with 1 more step
-                target_accuracy = H * delta
-                if error < target_accuracy:
+                    
+                    
+                #
+                R2 = np.array(R2)
+                
+                #calculation of error for this calculation
+                error_vec = (R2[n - 2] - R1[n - 2]) / ((n / (n - 1)) ** (2 * (n - 1)) - 1)
+                
+                error  = np.sqrt(error_vec[0] ** 2 + error_vec[1] ** 2)
+                
+                
+                # if error is less than goal accuracy, stop. Otherwise, repeat with more steps!
+                
+                target = H * delta
+                
+                if error < target:
                     tpoints.append(t + H)
                     xpoints.append(R2[n - 1][0])
                     ypoints.append(R2[n - 1][1])
                     return R2[n - 1]
                 else:
-                    return compute_row_n(R2, n + 1)
+                    return compute_R_n(R2, n + 1)
 
 
-        return compute_row_n(array([modified_midpoint_step(r, 1)], float), 2)
+        return compute_R_n(np.array([modified_midpoint(r, 1)], float), 2)
 
-    Bulirsch_Stoer_step(r, t_0, t_f - t_0)
+    BS_step(r, t_0, t_f - t_0)
     return tpoints, xpoints, ypoints
 
-
 t, x, y = solution(t_0, t_f)
-plot(t, x, 'b.-',label = 'x')
-plot(t, y, 'r.-',label = 'y')
-xlabel('$t$',fontsize=20)
+plt.plot(t, x, 'b.-',label = 'x')
+plt.plot(t, y, 'r.-',label = 'y')
+plt.xlabel('$t$',fontsize=20)
 plt.legend()
-ylabel('Concentrations',fontsize=20)
+plt.ylabel('Concentrations',fontsize=20)
 plt.savefig('../bin/adaptivebs.png')
